@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# jev — thin CLI over TypeSafe's System One endpoint (Jev).
+# Usage:
+#   jev raw < request.json
+#   jev ask --state <file|string> --noul "question"
+#   jev ask --state <file|string> --choice "question" opt[:desc] opt[:desc] ...
+#   jev ask --state <file|string> --score "question" level1 level2 [...]
+# Env: TYPESAFE_API_KEY (required), JEV_MODEL (default jev-latest)
+set -euo pipefail
+
+: "${TYPESAFE_API_KEY:?TYPESAFE_API_KEY is not set. Create one at https://console.typesafe.ai/}"
+MODEL="${JEV_MODEL:-jev-latest}"
+URL="https://api.typesafe.ai/v1/systemone"
+
+die() { echo "jev: $*" >&2; exit 1; }
+
+call() {  # stdin: request body; stdout: response body
+  local out code
+  out=$(curl -sS -w '\n%{http_code}' -X POST "$URL" \
+    -H "Authorization: Bearer $TYPESAFE_API_KEY" \
+    -H "Content-Type: application/json" --data-binary @-)
+  code=${out##*$'\n'}; out=${out%$'\n'*}
+  [[ $code == 2* ]] || die "HTTP $code: $out"
+  printf '%s\n' "$out"
+}
+# ponytail: no retry/backoff; add if 5xx shows up in practice.
+
+state_json() {  # file path -> its contents (json if parseable, else string); else literal string
+  local s=$1
+  if [[ -r $s && -f $s ]]; then
+    jq -e . "$s" 2>/dev/null || jq -Rs . "$s"
+  else
+    jq -n --arg s "$s" '$s'
+  fi
+}
+
+mode=${1:-}; shift || true
+case $mode in
+  raw) call ;;
+  ask)
+    state="" qtype="" question=""; args=()
+    while [[ $# -gt 0 ]]; do
+      case $1 in
+        --state) state=$2; shift 2 ;;
+        --noul|--choice|--score) qtype=${1#--}; question=$2; shift 2; args=("$@"); break ;;
+        *) die "unknown arg: $1" ;;
+      esac
+    done
+    [[ -n $state && -n $qtype ]] || die "need --state and one of --noul/--choice/--score"
+    s=$(state_json "$state")
+    case $qtype in
+      noul)
+        body=$(jq -n --argjson state "$s" --arg m "$MODEL" --arg q "$question" \
+          '{state:$state, model:$m, questions:{q:{type:"noul", instructions:$q}}}')
+        call <<<"$body" | jq -r '.answers.q.noul' ;;
+      choice)
+        [[ ${#args[@]} -ge 2 ]] || die "choice needs at least 2 options"
+        crit=$(printf '%s\n' "${args[@]}" | jq -R 'split(":") | {(.[0]): (if length>1 then .[1:]|join(":") else null end)}' | jq -s add)
+        body=$(jq -n --argjson state "$s" --arg m "$MODEL" --arg q "$question" --argjson c "$crit" \
+          '{state:$state, model:$m, questions:{q:{type:"choice", instructions:$q, criteria:$c}}}')
+        call <<<"$body" | jq -r '.answers.q | "\(.choice) \(.confidence)"' ;;
+      score)
+        [[ ${#args[@]} -ge 2 ]] || die "score needs at least 2 levels"
+        crit=$(printf '%s\n' "${args[@]}" | jq -R . | jq -s .)
+        body=$(jq -n --argjson state "$s" --arg m "$MODEL" --arg q "$question" --argjson c "$crit" \
+          '{state:$state, model:$m, questions:{q:{type:"score", instructions:$q, criteria:$c}}}')
+        call <<<"$body" | jq -r '.answers.q | "\(.score) \(.confidence)"' ;;
+    esac ;;
+  *) sed -n '2,8p' "$0" >&2; exit 1 ;;
+esac
