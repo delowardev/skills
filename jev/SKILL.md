@@ -24,8 +24,16 @@ Jev answers **one narrow question over some state** and returns a typed value.
 Code owns the workflow; Jev supplies the "gut check" at a fork. It does not write
 code, explain, or reason in steps. Use a normal model for that.
 
-Requires `TYPESAFE_API_KEY` in the environment (get one at https://console.typesafe.ai/).
 Helper: `${CLAUDE_SKILL_DIR}/bin/jev` (curl + jq, no SDK).
+
+## Setup
+
+Needs `TYPESAFE_API_KEY`. If the helper reports it is not set:
+1. Tell the user to create a key at https://console.typesafe.ai/ and paste it here.
+2. Save it with `jev key <API_KEY>` (writes `env.TYPESAFE_API_KEY` in `~/.claude/settings.json`).
+3. Tell them the key lands in this chat transcript, and that a new session is needed before it loads.
+   For the current session, prefix calls with `TYPESAFE_API_KEY=<key>`.
+If the user declines, continue without Jev; every recipe here has a plain-judgment fallback.
 
 ## Primitives
 
@@ -74,6 +82,14 @@ jev ask --state "$USER_REQUEST" --choice "What kind of request is this?" \
 
 **Rerank candidates** (patches, search queries, file lists): put candidates in state as
 named fields and ask a `choice` over their names, or one `score` per candidate.
+
+## Manual use and comparison
+
+When the user asks to "ask jev", "check with jev", or "compare with jev" on a
+specific question, run the matching `jev ask` call and answer in two lines:
+one with Jev's raw value, one with your own judgment on the same question, then
+note whether they agree. Keep the state file so they can rerun it. This is how
+thresholds get tuned for this codebase.
 
 ## Rules
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # jev — thin CLI over TypeSafe's System One endpoint (Jev).
 # Usage:
+#   jev key <API_KEY>       # store key in ~/.claude/settings.json env block
 #   jev raw < request.json
 #   jev ask --state <file|string> --noul "question"
 #   jev ask --state <file|string> --choice "question" opt[:desc] opt[:desc] ...
@@ -8,7 +9,14 @@
 # Env: TYPESAFE_API_KEY (required), JEV_MODEL (default jev-latest)
 set -euo pipefail
 
-: "${TYPESAFE_API_KEY:?TYPESAFE_API_KEY is not set. Create one at https://console.typesafe.ai/}"
+if [[ ${1:-} == key ]]; then
+  [[ -n ${2:-} ]] || { echo "jev: usage: jev key <API_KEY>" >&2; exit 1; }
+  f=~/.claude/settings.json; [[ -s $f ]] || echo '{}' > "$f"
+  jq --arg k "$2" '.env.TYPESAFE_API_KEY = $k' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+  echo "jev: key saved to $f (env.TYPESAFE_API_KEY). Restart Claude Code to load it."; exit 0
+fi
+
+: "${TYPESAFE_API_KEY:?TYPESAFE_API_KEY is not set. Run: jev key <API_KEY>  (create one at https://console.typesafe.ai/)}"
 MODEL="${JEV_MODEL:-jev-latest}"
 URL="https://api.typesafe.ai/v1/systemone"
 
@@ -66,5 +74,5 @@ case $mode in
           '{state:$state, model:$m, questions:{q:{type:"score", instructions:$q, criteria:$c}}}')
         call <<<"$body" | jq -r '.answers.q | "\(.score) \(.confidence)"' ;;
     esac ;;
-  *) sed -n '2,8p' "$0" >&2; exit 1 ;;
+  *) sed -n '2,9p' "$0" >&2; exit 1 ;;
 esac

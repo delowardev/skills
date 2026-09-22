@@ -19,3 +19,21 @@ ln -s "$PWD/senior-dev" ~/.claude/skills/senior-dev
 ```
 
 Then invoke with `/jev` or `/senior-dev` in Claude Code.
+
+## Jev API key
+
+`jev` is optional. `senior-dev` works without it and falls back to its own judgment.
+
+To enable it, create a key at https://console.typesafe.ai/ and store it:
+
+```bash
+~/.claude/skills/jev/bin/jev key <API_KEY>
+```
+
+This writes `env.TYPESAFE_API_KEY` into `~/.claude/settings.json`, which Claude Code
+loads into every new session. If the key is missing and you invoke `/jev`, Claude will
+ask you to paste it and run the same command for you. Note that a key pasted in chat
+ends up in the session transcript; run the command yourself if you'd rather keep it out.
+
+To compare Jev against Claude's own judgment on a question, say "compare with jev".
+For routing comparisons in orchestrator mode use `/senior-dev auto --compare`.

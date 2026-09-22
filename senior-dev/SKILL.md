@@ -39,11 +39,17 @@ Two signals, each rated once per subtask:
 Irreversible or security-sensitive work (auth, payments, migrations, deletes,
 force-push) is always `self`, in every mode.
 
-## Jev integration
+## Jev integration (optional)
 
-If `TYPESAFE_API_KEY` is set, use the `jev` skill (`~/.claude/skills/jev/bin/jev`)
-for the cheap judgments below. If it is unset or returns an error, fall back to
-your own judgment silently; never block on Jev.
+Jev is an accelerator, not a dependency. Use the `jev` skill
+(`~/.claude/skills/jev/bin/jev`) for the cheap judgments below only when
+`TYPESAFE_API_KEY` is set and the user has not said "without jev" or
+`/senior-dev <mode> --no-jev`. If it is unset, errors, or is disabled, fall
+back to your own judgment silently; never block on Jev and never prompt for a
+key from inside orchestrator mode. Do not mention Jev unless it was used.
+
+To compare routing decisions, `/senior-dev <mode> --compare` prints both Jev's
+difficulty/risk answers and your own before each delegation, then uses yours.
 
 Before delegating a subtask, write the brief to a file and ask both questions
 in one go (they are independent):
