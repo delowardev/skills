@@ -6,6 +6,7 @@ My personal [Claude Code](https://claude.com/claude-code) skills. Written for my
 
 | Skill | What it does |
 |---|---|
+| [`code-audit`](code-audit/) | Read-only audit for needless complexity, duplicated logic, and stale assumptions (dead flags, shims, outdated workarounds). Evidence-backed ranked report; changes only after approval. |
 | [`jev`](jev/) | Calls [TypeSafe AI's Jev](https://typesafe.ai) for fast, typed judgments inside a session: safety gates, file triage, step verification, request routing. Needs `TYPESAFE_API_KEY`. |
 | [`senior-dev`](senior-dev/) | Orchestrator mode. Plans, delegates to cheaper model tiers (haiku / sonnet / opus), verifies by execution. Modes `auto`, `low`, `high`. Uses `jev` for routing decisions when available. |
 
@@ -14,11 +15,12 @@ My personal [Claude Code](https://claude.com/claude-code) skills. Written for my
 Each folder is a skill. Symlink the ones you want into `~/.claude/skills`:
 
 ```bash
+ln -s "$PWD/code-audit" ~/.claude/skills/code-audit
 ln -s "$PWD/jev" ~/.claude/skills/jev
 ln -s "$PWD/senior-dev" ~/.claude/skills/senior-dev
 ```
 
-Then invoke with `/jev` or `/senior-dev` in Claude Code.
+Then invoke with `/code-audit`, `/jev`, or `/senior-dev` in Claude Code.
 
 ## Jev API key
 
